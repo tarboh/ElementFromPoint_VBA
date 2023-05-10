@@ -102,7 +102,7 @@ Public Function ElementFromPoint(ByRef uia As CUIAutomation, ByRef pt As POINTAP
 
     '（第四引数）実行した処理の戻り値（ElementFromPointの成否判定）はLong型で受け取ります。'
 
-    '（第五引数）引数は２つあります。（値渡し）'
+    '（第五引数）引数は64bit版では2つ、32bit版では3つあります。（値渡し）'
 
     '（第六引数）「引数の型の種類を示す値」を格納した配列はここにあります。（参照渡し）'
 
@@ -117,7 +117,7 @@ Public Function ElementFromPoint(ByRef uia As CUIAutomation, ByRef pt As POINTAP
                 Set ElementFromPoint = Element
                 Set Element = Nothing
                 'ElementをIUnknown::Releaseで解放しようとすると、
-                '呼出元が参照しようとするインターフェースも壊れてExcelがクラッシュするようなので注意
+                '呼出元が参照しようとするインターフェースも壊れてExcelがクラッシュするようなので注意'
             End If
         Else
             SetLastError vRtn
