@@ -32,12 +32,12 @@ Public Const CC_STDCALL As Long = 4
 
 #If Win64 Then
     Public Const pElementFromPoint As Long = 56
-    'Address of 8th Function in the virtual function table of the CUIAutomation Class            : (8-1)th * 8 Byte'
+    'Address of 8th Function in the virtual function table of the CUIAutomation Class : (8-1)th * 8 Byte'
     Public Const pCount = 2
     'Number of arguments in 64bit environment ( pt, Element* )'
 #Else
     Public Const pElementFromPoint As Long = 28
-    'Address of 8th Function in the virtual function table of the CUIAutomation Class            : (8-1)th * 4 Byte'
+    'Address of 8th Function in the virtual function table of the CUIAutomation Class : (8-1)th * 4 Byte'
     Public Const pCount = 3
     'Number of arguments in 32bit environment ( pt.x, pt.y, Element* )'
 #End If
@@ -62,7 +62,7 @@ Public Function ElementFromPoint(ByRef uia As CUIAutomation, ByRef pt As POINTAP
         '互換性がある単一の変数に手動で格納しておく必要がある。'
         Dim llpt As LongLong
         llpt = pt.y * (2 ^ 32) + pt.x
-        'Shift y left by 4 bits and then add x to put the two parameters into one variable'
+        'Shift y left by 32 bits and then add x to put the two parameters into one variable'
         '0000YYYY pt.y '
         'YYYY0000 pt.y * 2 ^ 32 '
         'YYYYXXXX (pt.y * 2 ^ 32) + pt.x '
