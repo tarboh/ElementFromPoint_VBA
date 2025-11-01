@@ -1,23 +1,10 @@
-Attribute VB_Name = "M_ElementFromPoint"
+'Module UIA_ElementFromPoint
+
 Option Explicit
 
-'GetCursorPosŠÖ”'
-'ƒ}ƒEƒXƒJ[ƒ\ƒ‹‚ÌÀ•W‚ğPOINTAPI\‘¢‘Ì‚Æ‚µ‚Äæ“¾‚·‚é'
-Public Declare PtrSafe Function GetCursorPos Lib "user32" (lpPoint As POINTAPI) As Long
-
-'POINTAPI\‘¢‘Ì'
-Public Type POINTAPI
-    x As Long
-    y As Long
-End Type
-
-
-'DispCallFuncŠÖ”'
-'ƒNƒ‰ƒXƒCƒ“ƒXƒ^ƒ“ƒX‚ÌŠÖ”ƒ|ƒCƒ“ƒ^‚ğg—p‚·‚é‚±‚Æ‚ÅA'
-'”CˆÓ‚ÌƒIƒvƒVƒ‡ƒ“iŒÄ‚Ño‚µ‹K–ñ“™j‚ÅƒIƒuƒWƒFƒNƒg‚Ìƒƒ\ƒbƒh‚ğÀs‚·‚é'
-Public Declare PtrSafe Function DispCallFunc Lib "oleaut32.dll" ( _
+Private Declare PtrSafe Function DispCallFunc Lib "oleAut32.dll" ( _
     ByVal pvInstance As LongPtr, _
-    ByVal offsetinVft As LongPtr, _
+    ByVal offsetinVft As Long, _
     ByVal CallConv As Long, _
     ByVal retTYP As Integer, _
     ByVal paCNT As Long, _
@@ -26,123 +13,168 @@ Public Declare PtrSafe Function DispCallFunc Lib "oleaut32.dll" ( _
     ByRef retVAR As Variant _
 ) As Long
 
-'CUIAutomation::ElementFromPoint‚ğDispCallFuncŒo—R‚ÅŒÄ‚Ño‚·‚½‚ß‚Ì’è”ƒZƒbƒg'
-Public Const S_OK = 0
-Public Const CC_STDCALL As Long = 4
+Private Declare PtrSafe Function GetCursorPos Lib "user32.dll" (lpPoint As PointAPI) As Long
 
-#If Win64 Then
-    Public Const pElementFromPoint As Long = 56
-    'Address of 8th Function in the virtual function table of the CUIAutomation Class : (8-1)th * 8 Byte'
-    Public Const pCount = 2
-    'Number of arguments in 64bit environment ( pt, Element* )'
-#Else
-    Public Const pElementFromPoint As Long = 28
-    'Address of 8th Function in the virtual function table of the CUIAutomation Class : (8-1)th * 4 Byte'
-    Public Const pCount = 3
-    'Number of arguments in 32bit environment ( pt.x, pt.y, Element* )'
-#End If
+Private Type PointAPI: x As Long: y As Long: End Type
 
-'w’è‚³‚ê‚½À•W‚ÌƒGƒŒƒƒ“ƒg‚ğæ“¾‚·‚éƒƒ\ƒbƒh'
-Public Function ElementFromPoint(ByRef uia As CUIAutomation, ByRef pt As POINTAPI) As IUIAutomationElement
+Private Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
 
-    Dim Element As IUIAutomationElement
-    Dim vParams(pCount) As Variant     'ElementFromPoint‚É“n‚·Šeíˆø”‚ğAƒoƒŠƒAƒ“ƒgŒ^‚Ì”z—ñ‚Æ‚µ‚Ä€”õ'
-    Dim vParamPtr(pCount) As LongPtr   'ElementFromPoint‚Ég‚¤Šeíˆø”‚Ìƒ|ƒCƒ“ƒ^‚ğA”z—ñ‚Æ‚µ‚Ä€”õ'
-    Dim vParamType(pCount) As Integer  'ElementFromPoint‚Ég‚¤Šeíˆø”‚ÌŒ^‚ğ¦‚·’l‚ğAIntegerŒ^‚Ì”z—ñ‚Æ‚µ‚Ä€”õ'
+Private Declare PtrSafe Function GetAsyncKeyState Lib "user32" (ByVal vKey As Long) As Integer
 
 
-    'ˆø”–{‘Ì‚ÌŠi”[ˆ—i32bit‚Æ64bit‚Åˆ—‚ª•ªŠòj'
+Public Function ElementFromPoint(pt As PointAPI) As IUIAutomationElement
+
+    'IUIAutomationã®COMã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’ç”¨æ„
+    Dim uia As New CUIAutomation
+    Dim CUIAutomationã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ã‚¹ As LongPtr
+    CUIAutomationã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ã‚¹ = ObjPtr(uia)
+
+    'ElementFromPontãƒ¡ã‚½ãƒƒãƒ‰ã®ã€IUIAutomationã®ä»®æƒ³é–¢æ•°ãƒ†ãƒ¼ãƒ–ãƒ«å†…ã§ã®å®šç¾©ç•ªå·ã¨ã€
+    'ãã‚Œã‚’å…ƒã«ã—ãŸé–¢æ•°ãƒã‚¤ãƒ³ã‚¿æ ¼ç´ä½ç½®ã®ã‚ªãƒ•ã‚»ãƒƒãƒˆå€¤ã‚’ç”¨æ„
+    Dim ElementFromPointã®é–¢æ•°ID As Long
+    ElementFromPointã®é–¢æ•°ID = 7 '0ã‚¹ã‚¿ãƒ¼ãƒˆã§7ç•ªç›®ã®é–¢æ•°ã€‚ã“ã®å€¤ã¯oleViewç­‰ã®ãƒ„ãƒ¼ãƒ«ã§èª¿æŸ»ãŒå¿…è¦
+    Dim ElementFromPointé–¢æ•°ãƒã‚¤ãƒ³ã‚¿åº§æ¨™ As Long
     #If Win64 Then
-    
-        '64bitExcel‚Å‚ÍWOW64‚ğ’Ê‚³‚¸’¼ÚŠÖ”‚ªŒÄ‚Ño‚³‚ê‚éB'
-        'stdcallŒÄ‚Ño‚µ‹K–ñ‚à–³‹‚³‚ê‚é‚½‚ßAˆø”‚ÍCPU“à‚Å‚ÍƒXƒ^ƒbƒN—Ìˆæ‚Å‚Í‚È‚­'
-        'ƒŒƒWƒXƒ^‚É‚»‚Ì‚Ü‚Ü•ú‚è‚Ü‚ê‚éB‚»‚ÌŒ‹‰ÊACUIAutomation‚ÌƒCƒ“ƒXƒ^ƒ“ƒX—Ìˆæ‚Ì'
-        '•s“KØ‚ÈƒAƒhƒŒƒX‚É’l‚ª“n‚³‚ê‚Äƒƒ‚ƒŠ”j‰ó‚ª‹N‚±‚èExcel‚ªƒNƒ‰ƒbƒVƒ…‚·‚éƒŠƒXƒN‚ª‚ ‚éB'
-        '‚±‚ê‚ğ–h‚®‚½‚ßA–‘O‚ÉPINTAPI‚ÌŠeƒƒ“ƒo‚ğAŒÄ‚Ño‚µæ‚ÅŠi”[‚³‚ê‚étagPOINT‚Æ'
-        'ŒİŠ·«‚ª‚ ‚é’Pˆê‚Ì•Ï”‚Éè“®‚ÅŠi”[‚µ‚Ä‚¨‚­•K—v‚ª‚ ‚éB'
-        Dim llpt As LongLong
-        llpt = pt.y * (2 ^ 32) + pt.x
-        'Shift y left by 32 bits and then add x to put the two parameters into one variable'
-        '0000YYYY pt.y '
-        'YYYY0000 pt.y * 2 ^ 32 '
-        'YYYYXXXX (pt.y * 2 ^ 32) + pt.x '
-        
-        vParams(0) = llpt
-        vParams(1) = VarPtr(Element)
-    
+        ElementFromPointé–¢æ•°ãƒã‚¤ãƒ³ã‚¿åº§æ¨™ = ElementFromPointã®é–¢æ•°ID * 8
     #Else
+        ElementFromPointé–¢æ•°ãƒã‚¤ãƒ³ã‚¿åº§æ¨™ = ElementFromPointã®é–¢æ•°ID * 4
+    #End If
     
-        '32bitŠÂ‹«‚Å‚ÍWOW64‚Ì’†ŠÔˆ—‚Å\‘¢‘Ì‚ÌŠeƒƒ“ƒo‚É“KØ‚É’l‚ª“n‚³‚ê‚é‚½‚ßA“n‚µæ‚Ìd—l‚ğ”z—¶‚·‚é•K—v‚ª–³‚¢'
-        vParams(0) = pt.x
-        vParams(1) = pt.y
-        vParams(2) = VarPtr(Element)
-    
+    'ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®å‘¼ã³å‡ºã—è¦ç´„ã‚’ç”¨æ„
+    Const STDCALL As Long = 4
+
+    'ElementFromPointã«æ¸¡ã™ï¼’ã¤ã®å¼•æ•°ã®å®Ÿä½“ã‚’ç”¨æ„ â€»çµ¶å¯¾ã«Variantå‹ã˜ã‚ƒãªã„ã¨ãƒ€ãƒ¡
+
+    'å¼•æ•°1ï¼šåº§æ¨™æƒ…å ±
+    '64bitæ•´æ•°(LongLongå‹)ã«ã‚­ãƒ£ã‚¹ãƒˆã—ãªã„ã¨Doubleå‹ã¨ã—ã¦æ‰±ã‚ã‚Œã€å€¤ãŒå£Šã‚Œã‚‹ã€‚
+    'åŒã˜64bitã‚µã‚¤ã‚ºã®Currencyå‹ã¯å›ºå®šå°æ•°ç‚¹ï¼ˆæ•´æ•°éƒ¨32bitï¼‹å°æ•°éƒ¨32bitï¼‰ã¨ã—ã¦æ‰±ã‚ã‚Œã€
+    '64bitæ•´æ•°ã®å…¨ãƒ“ãƒƒãƒˆã‚’ä¿æŒã§ããªã„ãŸã‚ã€å¿…ãšLongLongå‹ã«ã‚­ãƒ£ã‚¹ãƒˆã™ã‚‹å¿…è¦ãŒã‚ã‚‹ã€‚
+    '32bitç’°å¢ƒã ã¨STDCALLå‘¼ã³å‡ºã—è¦ç´„ã¯ã€å¼•æ•°ã‚’ã‚¹ã‚¿ãƒƒã‚¯ã«ç©ã¿ä¸Šã’ã‚‹ã®ã§æ§‹é€ ä½“æ¸¡ã—ã¨åŒã˜å½¢ã«ãªã‚‹
+    #If Win64 Then
+        Dim åº§æ¨™å€¤ As Variant
+        åº§æ¨™å€¤ = CLngLng(pt.y * (2 ^ 32) + pt.x)
+    #Else
+        Dim åº§æ¨™å€¤_ä¸Šä½ãƒ“ãƒƒãƒˆ As Variant, åº§æ¨™å€¤_ä¸‹ä½ãƒ“ãƒƒãƒˆ As Variant
+        åº§æ¨™å€¤_ä¸‹ä½ãƒ“ãƒƒãƒˆ = pt.x
+        åº§æ¨™å€¤_ä¸Šä½ãƒ“ãƒƒãƒˆ = pt.y
     #End If
 
-    'ˆø”‚Ìî•ñiŒ^‚ÆƒAƒhƒŒƒXj‚ÌŠi”[ˆ—'
-    Dim pIndex As Long
-    For pIndex = 0 To pCount
-        vParamPtr(pIndex) = VarPtr(vParams(pIndex))   'ElementFromPoint‚Ég‚¤Šeíˆø”‚Ìƒ|ƒCƒ“ƒ^'
-        vParamType(pIndex) = VarType(vParams(pIndex)) 'ElementFromPoint‚Ég‚¤Šeíˆø”‚ÌŒ^‚ğ¦‚·’l'
-    Next
+    'å¼•æ•°2ï¼šæœ€çµ‚çš„ã«å—ã‘å–ã‚ŠãŸã„IUIAutomationå¤‰æ•°ã®ãƒã‚¤ãƒ³ã‚¿
+    'ã‚·ã‚°ãƒãƒãƒ£ãŒIUIAutomationElement**ãªã®ã§ã€å¤‰æ•°ã®ãƒã‚¤ãƒ³ã‚¿ã‚’ç”¨æ„ã™ã‚‹å¿…è¦ãŒã‚ã‚‹ã€‚
+    Dim ElemPtr As Variant, Element As IUIAutomationElement
+    ElemPtr = VarPtr(Element)
 
-    Dim lRtn As Variant  'DispCallFunc‚Ì¬”Û”»’è‚ğŠi”[‚·‚é•Ï”'
-    Dim vRtn As Variant  'ElementFromPoint‚Ì¬”Û”»’è‚ğŠi”[‚·‚é•Ï”'
+    'ã“ã®å¼•æ•°1,å¼•æ•°2ã¯DispCallFuncã‹ã‚‰ã®ç›´æ¥çš„ãªå¹²æ¸‰ã‚’å—ã‘ã‚‹ã®ã§ã€
+    'Cè¨€èªã®VARIANTã¨ãƒã‚¤ãƒŠãƒªãƒ¬ãƒ™ãƒ«ã§äº’æ›æ€§ãŒã‚ã‚‹Variantå‹ã«ã—ã¦ãŠãå¿…è¦ãŒã‚ã‚‹ã€‚
+    'LongPtrãªã©ã®ã‚ˆã†ãªãƒ—ãƒªãƒŸãƒ†ã‚£ãƒ–å‹ã¯VBAå†…éƒ¨ã§ã¯Cè¨€èªã®ãƒã‚¤ãƒ†ã‚£ãƒ–ãªå‹ã¨ã¯é•ã„ã€
+    '[å¤‰æ•°ãƒ†ãƒ¼ãƒ–ãƒ«ï¼‹å‹æƒ…å ±]ã¨ã„ã†æ§‹é€ ä½“ã¨ã—ã¦ä¿ç®¡ã•ã‚Œã¦ã„ã‚‹ãŸã‚ã€
+    'ã“ã®æ§‹é€ ä½“ã«Cè¨€èªå´ã®å¤‰æ•°å®šç¾©ã§ã‚¢ã‚¯ã‚»ã‚¹ã•ã‚Œã‚‹ã¨ãƒ¡ãƒ¢ãƒªç ´å£ŠãŒç™ºç”Ÿã—ã€ExcelãŒå³ã‚¯ãƒ©ãƒƒã‚·ãƒ¥ã™ã‚‹ã€‚
 
-    lRtn = DispCallFunc(ObjPtr(uia), pElementFromPoint, CC_STDCALL, vbLong, pCount, vParamType(0), vParamPtr(0), vRtn)
-    '@@@@@@@@@@@ByVal@@@@@ByVal@@@    @ByVal@ @ByVal @ByVal@@@ByRef@@@@ByRef@@@ ByRef'
-                
-                
-    'ƒDispCallFunc‚ª‚Ç‚Ì‚æ‚¤‚É‚µ‚ÄElementFromPoint‚ğŒÄ‚Ño‚µ‚Ä‚¢‚é‚Ì‚©‚Ì‰ğ“Ç„'
+    #If Win64 Then
+        'ç”¨æ„ã—ãŸå¼•æ•°ã®å®Ÿä½“ã®å‹æƒ…å ±ã‚’å®šç¾©ã—ãŸé…åˆ—ã‚’ç”¨æ„
+        Dim å¼•æ•°ã®å‹æƒ…å ±ã®é…åˆ—(0 To 1) As Integer
+        å¼•æ•°ã®å‹æƒ…å ±ã®é…åˆ—(0) = VarType(åº§æ¨™å€¤)
+        å¼•æ•°ã®å‹æƒ…å ±ã®é…åˆ—(1) = VarType(ElemPtr)
     
-    'i‘æˆêˆø”jCUIAutomationƒNƒ‰ƒX‚ÌA'
-    'i‘æ“ñˆø”j‰¼‘zŠÖ”ƒe[ƒuƒ‹ã‚ÌA8”Ô–Ú‚Ìƒ|ƒCƒ“ƒ^‚ª¦‚·ƒAƒhƒŒƒX‚É“WŠJ‚³‚ê‚Ä‚¢‚éˆ—‚ğÀs‚µ‚Ä‚­‚¾‚³‚¢B'
+        'ç”¨æ„ã—ãŸå¼•æ•°ã®å®Ÿä½“ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã‚’å®šç¾©ã—ãŸé…åˆ—ã‚’ç”¨æ„
+        Dim å¼•æ•°ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã®é…åˆ—(0 To 1) As LongPtr
+        å¼•æ•°ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã®é…åˆ—(0) = VarPtr(åº§æ¨™å€¤)
+        å¼•æ•°ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã®é…åˆ—(1) = VarPtr(ElemPtr)
     
-    'i‘æOˆø”jŒÄ‚Ño‚µ‹K–ñ‚ÍuCC_STDCALLv‚Å‚·B¦64bit”Å‚ÌExcel‚Å‚ÍA‚±‚Ì’l‚Í–³‹‚³‚ê‚é'
+        'ç”¨æ„ã—ãŸå¼•æ•°ã®å®Ÿä½“ã®å€‹æ•°ã‚’å®šç¾©ã—ãŸå¤‰æ•°ã‚’ç”¨æ„
+        Dim ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã«æ¸¡ã™å¼•æ•°ã®å€‹æ•° As Long
+        ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã«æ¸¡ã™å¼•æ•°ã®å€‹æ•° = 2
+    #Else
+        Dim å¼•æ•°ã®å‹æƒ…å ±ã®é…åˆ—(0 To 2) As Integer
+        å¼•æ•°ã®å‹æƒ…å ±ã®é…åˆ—(0) = VarType(åº§æ¨™å€¤_ä¸‹ä½ãƒ“ãƒƒãƒˆ)
+        å¼•æ•°ã®å‹æƒ…å ±ã®é…åˆ—(1) = VarType(åº§æ¨™å€¤_ä¸Šä½ãƒ“ãƒƒãƒˆ)
+        å¼•æ•°ã®å‹æƒ…å ±ã®é…åˆ—(2) = VarType(ElemPtr)
+        
+        Dim å¼•æ•°ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã®é…åˆ—(0 To 2) As LongPtr
+        å¼•æ•°ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã®é…åˆ—(0) = VarPtr(åº§æ¨™å€¤_ä¸‹ä½ãƒ“ãƒƒãƒˆ)
+        å¼•æ•°ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã®é…åˆ—(1) = VarPtr(åº§æ¨™å€¤_ä¸Šä½ãƒ“ãƒƒãƒˆ)
+        å¼•æ•°ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã®é…åˆ—(2) = VarPtr(ElemPtr)
+        
+        Dim ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã«æ¸¡ã™å¼•æ•°ã®å€‹æ•° As Long
+        ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã«æ¸¡ã™å¼•æ•°ã®å€‹æ•° = 3
+    #End If
 
-    'i‘ælˆø”jÀs‚µ‚½ˆ—‚Ì–ß‚è’liElementFromPoint‚Ì¬”Û”»’èj‚ÍLongŒ^‚Åó‚¯æ‚è‚Ü‚·B'
+    'ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆ»ã‚Šå€¤ï¼ˆæˆå¦åˆ¤å®šï¼‰ã‚’ä½•ã®å‹ã§å—ã‘å–ã‚‹ã‹æŒ‡å®šã™ã‚‹å¤‰æ•°ã‚’ç”¨æ„
+    Dim ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆ»ã‚Šå€¤ã®å‹ As Integer
+    ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆ»ã‚Šå€¤ã®å‹ = vbLong 'å®šæ•°å€¤ï¼š3
 
-    'i‘æŒÜˆø”jˆø”‚Í64bit”Å‚Å‚Í2‚ÂA32bit”Å‚Å‚Í3‚Â‚ ‚è‚Ü‚·Bi’l“n‚µj'
+    'ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆ»ã‚Šå€¤ï¼ˆæˆå¦åˆ¤å®šï¼‰ã‚’å—ã‘å–ã‚‹å¤‰æ•°ã‚’Variantå‹ã§ç”¨æ„
+    Dim ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆå¦åˆ¤å®š As Variant
 
-    'i‘æ˜Zˆø”juˆø”‚ÌŒ^‚Ìí—Ş‚ğ¦‚·’lv‚ğŠi”[‚µ‚½”z—ñ‚Í‚±‚±‚É‚ ‚è‚Ü‚·BiQÆ“n‚µj'
+    'DispCallFuncãƒ¡ã‚½ãƒƒãƒ‰è‡ªä½“ã®æˆå¦åˆ¤å®šã‚’å—ã‘å–ã‚‹å¤‰æ•°ã‚’ç”¨æ„
+    Dim DispCallFuncæˆå¦åˆ¤å®š As Long
 
-    'i‘æµˆø”juˆø”–{‘Ì‚ª‘¶İ‚·‚éƒƒ‚ƒŠƒAƒhƒŒƒX‚Ì’lv‚ğŠi”[‚µ‚½”z—ñ‚Í‚±‚±‚É‚ ‚è‚Ü‚·BiQÆ“n‚µj'
+    'DispCallFuncãƒ¡ã‚½ãƒƒãƒ‰ã«ã‚ˆã‚Šã€COMã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ãƒ¼ã‚¹ã‚’è¿‚å›ã—ã¦ç›´æ¥ElementFromPointã®ã‚¨ãƒ³ãƒˆãƒªãƒ¼ãƒã‚¤ãƒ³ãƒˆã‚’ã‚³ãƒ¼ãƒ«
+    DispCallFuncæˆå¦åˆ¤å®š = DispCallFunc( _
+        CUIAutomationã®ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ã‚¢ãƒ‰ãƒ¬ã‚¹, _
+        ElementFromPointé–¢æ•°ãƒã‚¤ãƒ³ã‚¿åº§æ¨™, _
+        STDCALL, _
+        ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆ»ã‚Šå€¤ã®å‹, _
+        ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã«æ¸¡ã™å¼•æ•°ã®å€‹æ•°, _
+        å¼•æ•°ã®å‹æƒ…å ±ã®é…åˆ—(0), _
+        å¼•æ•°ã®ã‚¢ãƒ‰ãƒ¬ã‚¹æƒ…å ±ã®é…åˆ—(0), _
+        ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆå¦åˆ¤å®š _
+    )
 
-    'i‘æ”ªˆø”jÀs‚µ‚½ˆ—‚Ì–ß‚è’liElementFromPoint‚Ì¬”Û”»’èj‚Í‚±‚±(vRet)‚ÉŠi”[‚µ‚Ä‚­‚¾‚³‚¢BiQÆ“n‚µj'
-    
-                
-    If lRtn = S_OK Then
-        If vRtn = S_OK Then
-            If Not Element Is Nothing Then
-                Set ElementFromPoint = Element
-                Set Element = Nothing
-                'Element‚ğIUnknown::Release‚Å‰ğ•ú‚µ‚æ‚¤‚Æ‚·‚é‚ÆA
-                'ŒÄoŒ³‚ªQÆ‚µ‚æ‚¤‚Æ‚·‚éƒCƒ“ƒ^[ƒtƒF[ƒX‚à‰ó‚ê‚ÄExcel‚ªƒNƒ‰ƒbƒVƒ…‚·‚é‚æ‚¤‚È‚Ì‚Å’ˆÓ'
-            End If
+    If DispCallFuncæˆå¦åˆ¤å®š = 0 Then '0:æˆåŠŸã‚’ç¤ºã™å€¤ï¼ˆS_OKå®šæ•°ï¼‰
+        If ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆå¦åˆ¤å®š = 0 Then '0:æˆåŠŸã‚’ç¤ºã™å€¤ï¼ˆS_OKå®šæ•°ï¼‰
+            Set ElementFromPoint = Element
         Else
-            SetLastError vRtn
-            Debug.Print ShowErrorMessage
+            Debug.Print "ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã¯ç•°å¸¸çµ‚äº†ã—ã¾ã—ãŸã€‚æˆ»ã‚Šå€¤ï¼š", ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰ã®æˆå¦åˆ¤å®š
         End If
     Else
-        SetLastError lRtn
-        Debug.Print ShowErrorMessage
-    End If
-    
-End Function
-
-
-'Œ»İ‚ÌƒJ[ƒ\ƒ‹ˆÊ’u‚ÌƒGƒŒƒƒ“ƒg‚ğæ“¾‚·‚éƒƒ\ƒbƒh'
-'iGetCursorPos‚àŠÖ”‘¤‚ÉˆÏ‘õ‚µ‚Ä‚¢‚é‚Ì‚ÅAƒJ[ƒ\ƒ‹ˆÈŠO‚ÌÀ•W‚ğ“n‚·•K—v‚ª–³‚¢‚È‚ç‚±‚¿‚ç‚ğg‚¤•û‚ªŠyj'
-Public Function ElementFromCursor(ByRef uia As CUIAutomation) As IUIAutomationElement
-
-    Dim pt As POINTAPI
-    GetCursorPos pt
-    
-    Dim elem As IUIAutomationElement
-    Set elem = ElementFromPoint(uia, pt)
-
-    If Not elem Is Nothing Then
-        Set ElementFromCursor = elem
+        Debug.Print "DispCallFuncãƒ¡ã‚½ãƒƒãƒ‰ã¯ç•°å¸¸çµ‚äº†ã—ã¾ã—ãŸã€‚æˆ»ã‚Šå€¤ï¼š", DispCallFuncæˆå¦åˆ¤å®š
     End If
 
 End Function
+
+Public Function ElementFromCursor() As IUIAutomationElement
+
+    Dim pt As PointAPI, res As Long
+    res = GetCursorPos(pt)
+    If res = 1 Then
+        Dim elem As IUIAutomationElement
+        Set elem = ElementFromPoint(pt)
+        If Not elem Is Nothing Then
+            Set ElementFromCursor = elem
+        Else
+            Debug.Print "ElementFromPointãƒ¡ã‚½ãƒƒãƒ‰å¤±æ•—"
+        End If
+    Else
+        Debug.Print "GetCursorPoså¤±æ•—"
+    End If
+
+End Function
+
+Public Sub ElementFromPointå‹•ä½œã‚µãƒ³ãƒ—ãƒ«()
+
+    If Selection.Value <> "" Then
+        MsgBox "ç©ºç™½ã‚»ãƒ«ã‚’é¸æŠã—ãŸæ…‹çŠ¶ã§é–‹å§‹ã—ã¦ãã ã•ã„ã€‚"
+        Exit Sub
+    Else
+        MsgBox "è‡ªå‹•ãƒ«ãƒ¼ãƒ—ã§ã‚«ãƒ¼ã‚½ãƒ«ä¸Šã®è¦ç´ ã‚’å–å¾—ã—ç¶šã‘ã¾ã™ã€‚" & vbCrLf & _
+        "çµ‚äº†ã™ã‚‹æ™‚ã¯ALTã‚­ãƒ¼ã‚’æŠ¼ã—ã¦ãã ã•ã„ã€‚"
+    End If
+    
+    Application.EnableEvents = False
+
+    Do
+        Dim elem As IUIAutomationElement
+        Set elem = ElementFromCursor
+        If Not elem Is Nothing Then
+            Debug.Print elem.CurrentName
+            Selection.Value = elem.CurrentName
+        End If
+        If (GetAsyncKeyState(vbKeyMenu) And -32768) = -32768 Then Exit Do
+    Sleep 1
+    DoEvents
+    Loop
+    
+    Application.EnableEvents = True
+
+End Sub
